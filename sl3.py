@@ -1,23 +1,18 @@
 import streamlit as st
 import numpy as np
-import cv2
 from PIL import Image
 import matplotlib.pyplot as plt
 from lime.lime_image import LimeImageExplainer
 from skimage.segmentation import mark_boundaries
 from ultralytics import YOLO
 
-# Load model
+# Load YOLO model
 model = YOLO("best.pt")  
 
 # Function to normalize image
 def normalize_image(image):
     image = np.clip(image, 0, 255)
     return image.astype(np.uint8)
-
-# Streamlit interface
-st.title("Object Detection and LIME Explanation")
-uploaded_file = st.file_uploader("Upload an Image", type=["jpg", "png", "jpeg"])
 
 # Ensure predict_fn returns fixed-size output
 def predict_fn(images):
@@ -55,14 +50,14 @@ def explain_with_lime(image, model):
         num_samples=1000,
     )
 
-    # Black out part of img that are non-contributing
+    # Black out parts of the image that are non-contributing
     temp, mask = explanation.get_image_and_mask(
         explanation.top_labels[0], positive_only=True, num_features=5, hide_rest=True
     )
     temp = normalize_image(temp)
     st.image(temp, caption="LIME Explanation - Contributing Towards Prediction", use_column_width=True)
 
-    # Explanation with pros and cons (both positive and negative features)
+    # Explanation with both pros and cons (positive and negative features)
     temp, mask = explanation.get_image_and_mask(
         explanation.top_labels[0], positive_only=False, num_features=10, hide_rest=False
     )
@@ -78,15 +73,16 @@ def explain_with_lime(image, model):
     plt.colorbar()
     st.pyplot(plt)
 
-# Main workflow
+# Streamlit interface
+st.title("Object Detection and LIME Explanation")
+uploaded_file = st.file_uploader("Upload an Image", type=["jpg", "png", "jpeg"])
+
 if uploaded_file is not None:
+    # Load and process the uploaded image
     img = Image.open(uploaded_file)
-    img = np.array(img)
+    img_rgb = np.array(img)  # Convert PIL Image to RGB numpy array
 
-    # Convert to RGB
-    img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-
-    # Display original image
+    # Display the original image
     st.image(img_rgb, caption="Uploaded Image", use_column_width=True)
 
     # Run YOLO inference
